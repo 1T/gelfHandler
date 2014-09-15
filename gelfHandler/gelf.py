@@ -6,7 +6,7 @@ License: BSD I guess
 import logging
 from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM, getfqdn
 from json import dumps
-from gziplib import compress
+from idlib import compress
 
 
 class handler(logging.Handler):
@@ -66,7 +66,7 @@ class handler(logging.Handler):
             zpdMsg = compress(dumps(msgDict))
             self.sock.sendto(zpdMsg, (self.host, self.port))
         if self.proto == 'TCP':
-            msg = compress(dumps(msgDict)) + '\0'
+            msg = compress(dumps(msgDict))
             try:
                 self.sock.sendall(msg)
                 self.sock.close()
