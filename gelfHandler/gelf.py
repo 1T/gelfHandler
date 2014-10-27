@@ -44,7 +44,7 @@ class handler(logging.Handler):
             self.sock.connect((self.host, int(self.port)))
 
         try:
-            self.format(record)
+            message = self.format(record)
         except:
             pass
 
@@ -53,8 +53,8 @@ class handler(logging.Handler):
         msgDict['version'] = '1.1'
         msgDict['timestamp'] = recordDict['created']
         msgDict['level'] = self.getLevelNo(recordDict['levelname'])
-        msgDict['long_message'] = recordDict['msg']
-        msgDict['short_message'] = recordDict['msg']
+        msgDict['long_message'] = message
+        msgDict['short_message'] = message
         msgDict['host'] = self.fromHost
         if self.fullInfo is True:
             msgDict['pid'] = recordDict['process']
