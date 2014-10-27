@@ -42,6 +42,12 @@ class handler(logging.Handler):
         if self.proto == 'TCP':
             self.sock = socket(AF_INET, SOCK_STREAM)
             self.sock.connect((self.host, int(self.port)))
+
+        try:
+            self.format(record)
+        except:
+            pass
+
         recordDict = record.__dict__
         msgDict = {}
         msgDict['version'] = '1.1'
