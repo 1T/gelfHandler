@@ -44,14 +44,14 @@ class handler(logging.Handler):
 
     def getLevelNo(self, level):
         levelsDict = {
-            'DEBUG': 	7,
-            'INFO': 	6,
-            'NOTICE':	5,
-            'WARNING':	4,
-            'ERROR':	3,
-            'CRITICAL':	2,
-            'ALERT': 	1,
-            'PANIC': 	0
+            'DEBUG':    7,
+            'INFO':     6,
+            'NOTICE':   5,
+            'WARNING':  4,
+            'ERROR':    3,
+            'CRITICAL': 2,
+            'ALERT':    1,
+            'PANIC':    0
         }
         try:
             return(levelsDict[level])
