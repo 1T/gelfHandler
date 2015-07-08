@@ -5,6 +5,7 @@ License: BSD I guess
 """
 import logging
 from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM, getfqdn
+from ssl import *
 from json import dumps
 from idlib import compress
 
@@ -16,13 +17,30 @@ class handler(logging.Handler):
         self.host = kw.get('host', 'localhost')
         self.port = kw.get('port', None)
         self.fullInfo = kw.get('fullInfo', False)
-        if self.proto == 'UDP' and self.port is None:
-            self.port = 12202
-        if self.proto == 'TCP' and self.port is None:
-            self.port = 12201
         self.facility = kw.get('facility', None)
         self.fromHost = kw.get('fromHost', getfqdn())
+        self.tls = kw.get('tls', False)
+        if self.proto == 'UDP':
+            self.connectUDPSocket()
+        if self.proto == 'TCP':
+            self.connectTCPSocket()
         logging.Handler.__init__(self)
+
+    def connectUDPSocket(self):
+        if self.port is None:
+            self.port = 12202
+        self.sock = socket(AF_INET, SOCK_DGRAM)
+
+    def connectTCPSocket(self):
+        if self.port is None:
+            self.port = 12201
+        self.sock = socket(AF_INET, SOCK_STREAM)
+        if self.tls:
+            self.sock = wrap_socket(self.sock, ssl_version=PROTOCOL_TLSv1, cert_reqs=CERT_NONE)
+        try:
+            self.sock.connect((self.host, int(self.port)))
+        except IOError, e:
+            raise RuntimeError('Could not connect via TCP: %s' % e)
 
     def getLevelNo(self, level):
         levelsDict = {
@@ -36,30 +54,22 @@ class handler(logging.Handler):
         except:
             raise('Could not determine level number')
 
-    def emit(self, record, **kwargs):
-        if self.proto == 'UDP':
-            self.sock = socket(AF_INET, SOCK_DGRAM)
-        if self.proto == 'TCP':
-            self.sock = socket(AF_INET, SOCK_STREAM)
-            self.sock.connect((self.host, int(self.port)))
-
-        try:
-            message = self.format(record)
-        except:
-            pass
-
+    def buildMessage(self, record, **kwargs):
         recordDict = record.__dict__
         msgDict = {}
         msgDict['version'] = '1.1'
         msgDict['timestamp'] = recordDict['created']
         msgDict['level'] = self.getLevelNo(recordDict['levelname'])
-        msgDict['long_message'] = message
-        msgDict['short_message'] = message
+        msgDict['short_message'] = recordDict['msg']
         msgDict['host'] = self.fromHost
         if self.fullInfo is True:
-            msgDict['pid'] = recordDict['process']
-            msgDict['processName'] = recordDict['processName']
-            msgDict['funcName'] = recordDict['funcName']
+            msgDict['function'] = recordDict['funcName']
+            msgDict['line'] = recordDict['lineno']
+            msgDict['module'] = recordDict['module']
+            msgDict['process_id'] = recordDict['process']
+            msgDict['process_name'] = recordDict['processName']
+            msgDict['thread_id'] = recordDict['thread']
+            msgDict['thread_name'] = recordDict['threadName']
         if self.facility is not None:
             msgDict['facility'] = self.facility
         elif self.facility is None:
@@ -68,13 +78,44 @@ class handler(logging.Handler):
         if isinstance(extra_props, dict):
             for k, v in extra_props.iteritems():
                 msgDict[k] = v
+        return msgDict
+
+    def formatMessage(self, msgDict):
         if self.proto == 'UDP':
-            zpdMsg = compress(dumps(msgDict))
-            self.sock.sendto(zpdMsg, (self.host, self.port))
+            msg = compress(dumps(msgDict))
         if self.proto == 'TCP':
-            msg = compress(dumps(msgDict)) + '\0'
+            msg = dumps(msgDict) + '\0'
+        return msg
+
+    def sendOverTCP(self, msg):
+        totalsent = 0
+        while totalsent < len(msg):
+            sent = self.sock.send(msg[totalsent:])
+            if sent == 0:
+                raise IOError("socket connection broken")
+            totalsent = totalsent + sent
+
+    def emit(self, record, **kwargs):
+        try:
+            msgDict = self.buildMessage(record, **kwargs)
+            msg = self.formatMessage(msgDict)
+        except UnicodeEncodeError, e:
+            print "%s in %s" % (e, msgDict)
+
+        if self.proto == 'UDP':
+            self.sock.sendto(msg, (self.host, self.port))
+
+        if self.proto == 'TCP':
             try:
-                self.sock.sendall(msg)
-                self.sock.close()
-            except Exception as e:
-                raise('Could not send message via TCP: %s' % e)
+                self.sendOverTCP(msg)
+            except IOError:
+                try:
+                    self.sock.close()
+                    self.connectTCPSocket()
+                    self.sendOverTCP(msg)
+                except IOError:
+                    raise RuntimeError('Could not connect via TCP: %s' % e)
+
+    def close(self):
+        if self.proto == 'TCP':
+            self.sock.close()
