@@ -8,7 +8,21 @@ from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM, getfqdn
 from ssl import *
 from json import dumps
 from idlib import compress
+from logging.handlers import SysLogHandler
 
+def addSysLogLevelName(level, levelName):
+    SysLogHandler.priority_names[levelName] = level
+
+def getSysLogLevelName(level):
+    if isinstance(level, (bytes, str, unicode)):
+	result = SysLogHandler.priority_names[level.lower()]
+	return result
+    elif isinstance(level, (int, long)):
+	results = [k for (k, v) in SysLogHandler.priority_names.items() if v == level]
+	results.sort(key=lambda x: len(x))
+	return results[-1].upper()
+    else:
+        raise ValueError("unknown syslog level name %s %s" % (type(level), repr(level)))
 
 class handler(logging.Handler):
 
@@ -42,28 +56,12 @@ class handler(logging.Handler):
         except IOError, e:
             raise RuntimeError('Could not connect via TCP: %s' % e)
 
-    def getLevelNo(self, level):
-        levelsDict = {
-            'DEBUG':    7,
-            'INFO':     6,
-            'NOTICE':   5,
-            'WARNING':  4,
-            'ERROR':    3,
-            'CRITICAL': 2,
-            'ALERT':    1,
-            'PANIC':    0
-        }
-        try:
-            return(levelsDict[level])
-        except:
-            raise('Could not determine level number')
-
     def buildMessage(self, record, **kwargs):
         recordDict = record.__dict__
         msgDict = {}
         msgDict['version'] = '1.1'
         msgDict['timestamp'] = recordDict['created']
-        msgDict['level'] = self.getLevelNo(recordDict['levelname'])
+        msgDict['level'] = getSysLogLevelName(recordDict['levelname'])
         msgDict['short_message'] = recordDict['msg']
         msgDict['host'] = self.fromHost
         if self.fullInfo is True:
