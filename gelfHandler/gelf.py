@@ -44,11 +44,15 @@ class handler(logging.Handler):
 
     def getLevelNo(self, level):
         levelsDict = {
-            'WARNING': 4,
-            'INFO': 6,
-            'DEBUG': 7,
-            'ERROR': 3,
-            }
+            'DEBUG': 	7,
+            'INFO': 	6,
+            'NOTICE':	5,
+            'WARNING':	4,
+            'ERROR':	3,
+            'CRITICAL':	2,
+            'ALERT': 	1,
+            'PANIC': 	0
+        }
         try:
             return(levelsDict[level])
         except:
@@ -60,13 +64,16 @@ class handler(logging.Handler):
         msgDict['version'] = '1.1'
         msgDict['timestamp'] = recordDict['created']
         msgDict['level'] = self.getLevelNo(recordDict['levelname'])
-        msgDict['long_message'] = message
-        msgDict['short_message'] = message
+        msgDict['short_message'] = recordDict['msg']
         msgDict['host'] = self.fromHost
         if self.fullInfo is True:
-            msgDict['pid'] = recordDict['process']
-            msgDict['processName'] = recordDict['processName']
-            msgDict['funcName'] = recordDict['funcName']
+            msgDict['function'] = recordDict['funcName']
+            msgDict['line'] = recordDict['lineno']
+            msgDict['module'] = recordDict['module']
+            msgDict['process_id'] = recordDict['process']
+            msgDict['process_name'] = recordDict['processName']
+            msgDict['thread_id'] = recordDict['thread']
+            msgDict['thread_name'] = recordDict['threadName']
         if self.facility is not None:
             msgDict['facility'] = self.facility
         elif self.facility is None:
