@@ -62,7 +62,7 @@ class handler(logging.Handler):
         msgDict['version'] = '1.1'
         msgDict['timestamp'] = recordDict['created']
         msgDict['level'] = getSysLogLevelName(recordDict['levelname'])
-        msgDict['short_message'] = recordDict['msg']
+        msgDict['short_message'] = recordDict['message']
         msgDict['host'] = self.fromHost
         if self.fullInfo is True:
             msgDict['function'] = recordDict['funcName']
@@ -99,9 +99,12 @@ class handler(logging.Handler):
 
     def emit(self, record, **kwargs):
         try:
+            self.format(record)
             msgDict = self.buildMessage(record, **kwargs)
             msg = self.formatMessage(msgDict)
         except UnicodeEncodeError, e:
+            print "%s in %s" % (e, msgDict)
+        except Exception, e:
             print "%s in %s" % (e, msgDict)
 
         if self.proto == 'UDP':
