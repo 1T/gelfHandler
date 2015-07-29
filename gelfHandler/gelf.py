@@ -60,10 +60,12 @@ class handler(logging.Handler):
         recordDict = record.__dict__
         msgDict = {}
         msgDict['version'] = '1.1'
+        msgDict['host'] = self.fromHost
         msgDict['timestamp'] = recordDict['created']
         msgDict['level'] = getSysLogLevelName(recordDict['levelname'])
         msgDict['short_message'] = recordDict['message']
-        msgDict['host'] = self.fromHost
+        if recordDict.get('exc_text', None):
+            msgDict['full_message'] = recordDict['exc_text']
         if self.fullInfo is True:
             msgDict['function'] = recordDict['funcName']
             msgDict['line'] = recordDict['lineno']
@@ -79,7 +81,7 @@ class handler(logging.Handler):
         extra_props = recordDict.get('gelfProps', None)
         if isinstance(extra_props, dict):
             for k, v in extra_props.iteritems():
-                msgDict[k] = v
+                msgDict['_' + k] = v
         return msgDict
 
     def formatMessage(self, msgDict):
