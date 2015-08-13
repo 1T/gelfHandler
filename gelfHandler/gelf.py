@@ -9,6 +9,7 @@ from ssl import *
 from json import dumps
 from idlib import compress
 from logging.handlers import SysLogHandler
+from transport import ThreadedTCPTransport, ThreadedUDPTransport
 
 def addSysLogLevelName(level, levelName):
     SysLogHandler.priority_names[levelName] = level
@@ -41,20 +42,12 @@ class handler(logging.Handler):
         logging.Handler.__init__(self)
 
     def connectUDPSocket(self):
-        if self.port is None:
-            self.port = 12202
-        self.sock = socket(AF_INET, SOCK_DGRAM)
+        url = 'udp://%s:%d/' % (self.host, int(self.port or 12202))
+        self._transport = ThreadedUDPTransport(url)
 
     def connectTCPSocket(self):
-        if self.port is None:
-            self.port = 12201
-        self.sock = socket(AF_INET, SOCK_STREAM)
-        if self.tls:
-            self.sock = wrap_socket(self.sock, ssl_version=PROTOCOL_TLSv1, cert_reqs=CERT_NONE)
-        try:
-            self.sock.connect((self.host, int(self.port)))
-        except IOError, e:
-            raise RuntimeError('Could not connect via TCP: %s' % e)
+        url = 'tcp://%s:%d/' % (self.host, int(self.port or 12201))
+        self._transport = ThreadedTCPTransport(url)
 
     def buildMessage(self, record, **kwargs):
         recordDict = record.__dict__
@@ -86,7 +79,7 @@ class handler(logging.Handler):
 
     def formatMessage(self, msgDict):
         if self.proto == 'UDP':
-            msg = compress(dumps(msgDict))
+            msg = dumps(msgDict)
         if self.proto == 'TCP':
             msg = dumps(msgDict) + '\0'
         return msg
@@ -109,20 +102,17 @@ class handler(logging.Handler):
         except Exception, e:
             print "%s in %s" % (e, msgDict)
 
-        if self.proto == 'UDP':
-            self.sock.sendto(msg, (self.host, self.port))
+        self._transport.async_send(
+            msg, headers=None,
+            success_cb=self.emit_success,
+            failure_cb=self.emit_failure)
 
-        if self.proto == 'TCP':
-            try:
-                self.sendOverTCP(msg)
-            except IOError:
-                try:
-                    self.sock.close()
-                    self.connectTCPSocket()
-                    self.sendOverTCP(msg)
-                except IOError:
-                    raise RuntimeError('Could not connect via TCP: %s' % e)
-
+    def emit_success(self):
+        pass
+    
+    def emit_failure(self, e):
+        raise e
+    
     def close(self):
         if self.proto == 'TCP':
-            self.sock.close()
+            self._transport.sock.close()
