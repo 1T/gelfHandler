@@ -10,7 +10,7 @@ import json
 from .syslog import getSysLogLevelName
 from .transport import ThreadedTCPTransport, ThreadedUDPTransport
 
-class handler(logging.Handler):
+class gelfHandler(logging.Handler):
 
     def __init__(self, **kw):
         self.proto = kw.get('proto', 'UDP')

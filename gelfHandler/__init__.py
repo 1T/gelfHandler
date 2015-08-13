@@ -1,3 +1,3 @@
-from gelf import handler, addSysLogLevelName, getSysLogLevelName
+from .gelf import gelfHandler
+from .syslog import addSysLogLevelName, getSysLogLevelName
 
-gelfHandler = handler
