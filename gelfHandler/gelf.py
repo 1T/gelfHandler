@@ -86,19 +86,21 @@ class gelfHandler(logging.Handler):
             msgDict = self.buildMessage(record, **kwargs)
             msg = self.formatMessage(msgDict)
         except UnicodeEncodeError, e:
-            print "%s in %s" % (e, msgDict)
+            e.data = msgDict
+            self.emit_failure(e, level=logging.WARNING)
         except Exception, e:
-            print "%s in %s" % (e, msgDict)
-
-        self._transport.async_send(
-            msg, headers=None,
-            success_cb=self.emit_success,
-            failure_cb=self.emit_failure)
+            e.data = msgDict
+            self.emit_failure(e)
+        else:
+            self._transport.async_send(
+                msg, headers=None,
+                success_cb=self.emit_success,
+                failure_cb=self.emit_failure)
 
     def emit_success(self):
         pass
 
-    def emit_failure(self, e):
+    def emit_failure(self, e, level=logging.ERROR):
         raise e
 
     def close(self):
