@@ -4,26 +4,11 @@ Author: Stewart Rutledge <stew.rutledge AT gmail.com>
 License: BSD I guess
 """
 import logging
-from socket import socket, AF_INET, SOCK_DGRAM, SOCK_STREAM, getfqdn
-from ssl import *
-from json import dumps
-from idlib import compress
-from logging.handlers import SysLogHandler
-from transport import ThreadedTCPTransport, ThreadedUDPTransport
-
-def addSysLogLevelName(level, levelName):
-    SysLogHandler.priority_names[levelName] = level
-
-def getSysLogLevelName(level):
-    if isinstance(level, (bytes, str, unicode)):
-	result = SysLogHandler.priority_names[level.lower()]
-	return result
-    elif isinstance(level, (int, long)):
-	results = [k for (k, v) in SysLogHandler.priority_names.items() if v == level]
-	results.sort(key=lambda x: len(x))
-	return results[-1].upper()
-    else:
-        raise ValueError("unknown syslog level name %s %s" % (type(level), repr(level)))
+import socket
+import ssl
+import json
+from .syslog import getSysLogLevelName
+from .transport import ThreadedTCPTransport, ThreadedUDPTransport
 
 class handler(logging.Handler):
 
@@ -33,7 +18,7 @@ class handler(logging.Handler):
         self.port = kw.get('port', None)
         self.fullInfo = kw.get('fullInfo', False)
         self.facility = kw.get('facility', None)
-        self.fromHost = kw.get('fromHost', getfqdn())
+        self.fromHost = kw.get('fromHost', socket.getfqdn())
         self.tls = kw.get('tls', False)
         if self.proto == 'UDP':
             self.connectUDPSocket()
@@ -77,11 +62,14 @@ class handler(logging.Handler):
                 msgDict['_' + k] = v
         return msgDict
 
+    def dumps(self, data):
+        return json.dumps(data)
+
     def formatMessage(self, msgDict):
         if self.proto == 'UDP':
-            msg = dumps(msgDict)
+            msg = self.dumps(msgDict)
         if self.proto == 'TCP':
-            msg = dumps(msgDict) + '\0'
+            msg = self.dumps(msgDict) + '\0'
         return msg
 
     def sendOverTCP(self, msg):
@@ -109,10 +97,10 @@ class handler(logging.Handler):
 
     def emit_success(self):
         pass
-    
+
     def emit_failure(self, e):
         raise e
-    
+
     def close(self):
         if self.proto == 'TCP':
             self._transport.sock.close()
