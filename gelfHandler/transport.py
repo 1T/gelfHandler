@@ -1,4 +1,6 @@
 # Inspired by github.com/getsentry/raven-python.git
+# (c) 2010-2012 by the Sentry Team
+# License: BSD
 
 import atexit
 import logging
