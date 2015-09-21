@@ -38,11 +38,14 @@ class AsyncTransport(Transport):
 
 class TCPTransport(Transport):
     scheme = ['sync+tcp']
+    queue_class = six.moves.queue.Queue
 
-    def __init__(self, url, timeout=DEFAULT_TIMEOUT):
+
+    def __init__(self, url, timeout=DEFAULT_TIMEOUT, cached=True):
         from requests.packages.urllib3.util.url import parse_url
         self._parsed_url = parse_url(url)
         self._url = url
+        self._cache = self.queue_class() if cached else None
         self.host = str(self._parsed_url.host)
         if self._parsed_url.port:
             self.port = int(self._parsed_url.port)
@@ -56,9 +59,11 @@ class TCPTransport(Transport):
             self.sock.connect((self.host, int(self.port)))
         except IOError, e:
             raise RuntimeError('Could not connect via TCP: %s' % e)
-        
+
     def send(self, data, headers):
         try:
+            if self._cache:
+                self.flush()
             totalsent = 0
             while totalsent < len(data):
                 sent = self.sock.send(data[totalsent:])
@@ -70,14 +75,22 @@ class TCPTransport(Transport):
                 self.sock.close()
                 self.__init__(self._url)
                 self.send(data, headers)
-            except IOError:
-                raise RuntimeError('Could not connect via TCP: %s' % e)
+            except Exception:
+                self._cache.put((data, headers))
         return True
+
+    def flush(self):
+        cache_data = []
+        while self._cache and self._cache.qsize():
+            cache_datum = self._cache.get_nowait()
+            cache_data.append(cache_datum)
+        for (data, headers) in cache_data:
+            self.send(data, headers)
 
     def close(self):
         self.sock.close()
 
-        
+
 class ThreadedTCPTransport(AsyncTransport, TCPTransport):
     scheme = ['tcp', 'threaded+tcp']
 
@@ -98,7 +111,7 @@ class ThreadedTCPTransport(AsyncTransport, TCPTransport):
         self.get_worker().queue(
             self.send_sync, data, headers, success_cb, failure_cb)
 
-        
+
 class UDPTransport(Transport):
     scheme = ['sync+udp']
 
@@ -141,7 +154,7 @@ class ThreadedUDPTransport(AsyncTransport, TCPTransport):
         self.get_worker().queue(
             self.send_sync, data, headers, success_cb, failure_cb)
 
-        
+
 class AsyncWorker(object):
     _terminator = object()
 

@@ -88,9 +88,13 @@ class gelfHandler(logging.Handler):
         except UnicodeEncodeError, e:
             e.data = msgDict
             self.emit_failure(e, level=logging.WARNING)
+        except ValueError, e:
+            e.data = msgDict
+            self.emit_failure(e)
         except Exception, e:
             e.data = msgDict
             self.emit_failure(e)
+            raise
         else:
             self._transport.async_send(
                 msg, headers=None,
@@ -101,7 +105,7 @@ class gelfHandler(logging.Handler):
         pass
 
     def emit_failure(self, e, level=logging.ERROR):
-        raise e
+        print repr(e)
 
     def close(self):
         if self.proto == 'TCP':
