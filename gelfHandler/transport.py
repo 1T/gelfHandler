@@ -95,7 +95,7 @@ class ThreadedTCPTransport(AsyncTransport, TCPTransport):
     scheme = ['tcp', 'threaded+tcp']
 
     def get_worker(self):
-        if not hasattr(self, '_worker') or not self._worker.is_alive():
+        if not hasattr(self, '_worker') or not self._worker or not self._worker.is_alive():
             self._worker = AsyncWorker()
         return self._worker
 
@@ -138,7 +138,7 @@ class ThreadedUDPTransport(AsyncTransport, TCPTransport):
     scheme = ['udp', 'threaded+udp']
 
     def get_worker(self):
-        if not hasattr(self, '_worker') or not self._worker.is_alive():
+        if not hasattr(self, '_worker') or not self._worker or not self._worker.is_alive():
             self._worker = AsyncWorker()
         return self._worker
 
@@ -168,7 +168,7 @@ class AsyncWorker(object):
         self.start()
 
     def is_alive(self):
-        return self._thread.is_alive()
+        return hasattr(self, '_thread') and self._thread and self._thread.is_alive()
 
     def main_thread_terminated(self):
         self._lock.acquire()
