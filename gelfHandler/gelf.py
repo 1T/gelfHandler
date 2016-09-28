@@ -19,6 +19,7 @@ class gelfHandler(logging.Handler):
         self.fullInfo = kw.get('fullInfo', False)
         self.facility = kw.get('facility', None)
         self.fromHost = kw.get('fromHost', socket.getfqdn())
+        self.globalProps = kw.get('gelfProps', {})
         self.tls = kw.get('tls', False)
         if self.proto == 'UDP':
             self.connectUDPSocket()
@@ -59,6 +60,10 @@ class gelfHandler(logging.Handler):
         extra_props = recordDict.get('gelfProps', None)
         if isinstance(extra_props, dict):
             for k, v in extra_props.iteritems():
+                msgDict['_' + k] = v
+        global_props = self.globalProps
+        if isinstance(global_props, dict):
+            for k, v in global_props.iteritems():
                 msgDict['_' + k] = v
         return msgDict
 
