@@ -7,7 +7,6 @@ import logging
 import os
 import six
 import socket
-import ssl
 import threading
 import time
 
@@ -40,7 +39,6 @@ class TCPTransport(Transport):
     scheme = ['sync+tcp']
     queue_class = six.moves.queue.Queue
 
-
     def __init__(self, url, timeout=DEFAULT_TIMEOUT, cached=True):
         from requests.packages.urllib3.util.url import parse_url
         self._parsed_url = parse_url(url)
@@ -57,7 +55,7 @@ class TCPTransport(Transport):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.sock.connect((self.host, int(self.port)))
-        except IOError, e:
+        except IOError as e:
             raise RuntimeError('Could not connect via TCP: %s' % e)
 
     def send(self, data, headers):

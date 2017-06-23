@@ -5,10 +5,10 @@ License: BSD I guess
 """
 import logging
 import socket
-import ssl
 import json
 from .syslog import getSysLogLevelName
 from .transport import ThreadedTCPTransport, ThreadedUDPTransport
+
 
 class gelfHandler(logging.Handler):
 
@@ -90,13 +90,13 @@ class gelfHandler(logging.Handler):
             self.format(record)
             msgDict = self.buildMessage(record, **kwargs)
             msg = self.formatMessage(msgDict)
-        except UnicodeEncodeError, e:
+        except UnicodeEncodeError as e:
             e.data = msgDict
             self.emit_failure(e, level=logging.WARNING)
-        except ValueError, e:
+        except ValueError as e:
             e.data = msgDict
             self.emit_failure(e)
-        except Exception, e:
+        except Exception as e:
             e.data = msgDict
             self.emit_failure(e)
             raise
@@ -110,7 +110,7 @@ class gelfHandler(logging.Handler):
         pass
 
     def emit_failure(self, e, level=logging.ERROR):
-        print repr(e)
+        print(repr(e))
 
     def close(self):
         if self.proto == 'TCP':

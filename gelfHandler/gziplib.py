@@ -1,12 +1,11 @@
 import gzip
 import tempfile
 
+
 def compress(string, level=9, bufsize=-1):
     compressedtext = None
-    tempfilename = None
 
     with tempfile.NamedTemporaryFile("wr", bufsize, "gziplib") as ntf:
-        tempfilename = ntf.name
 
         with gzip.GzipFile(ntf.name, "w", level) as gzf:
             gzf.write(string)
@@ -15,14 +14,12 @@ def compress(string, level=9, bufsize=-1):
             compressedtext = gzf.read()
 
     return compressedtext
-    
+
+
 def decompress(string, bufsize=-1):
     plaintext = None
-    tempfilename = None
 
     with tempfile.NamedTemporaryFile("wr", bufsize, "gziplib") as ntf:
-        tempfilename = ntf.name
-
         with open(ntf.name, "w") as gzf:
             gzf.write(string)
 
@@ -30,4 +27,3 @@ def decompress(string, bufsize=-1):
             plaintext = gzf.read()
 
     return plaintext
-
