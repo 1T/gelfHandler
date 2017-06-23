@@ -13,7 +13,7 @@ from .transport import ThreadedTCPTransport, ThreadedUDPTransport
 
 class gelfHandler(logging.Handler):
     '''
-    TODO
+    Send logs to Graylog using GELF formatted messages.
     '''
 
     def __init__(self, **kw):
@@ -37,14 +37,14 @@ class gelfHandler(logging.Handler):
 
     def connectUDPSocket(self):
         '''
-        TODO
+        UDP socket
         '''
         url = 'udp://%s:%d/' % (self.host, int(self.port or 12202))
         self._transport = ThreadedUDPTransport(url)
 
     def connectTCPSocket(self):
         '''
-        TODO
+        TCP socket
         '''
         url = 'tcp://%s:%d/' % (self.host, int(self.port or 12201))
         self._transport = ThreadedTCPTransport(url)
@@ -98,6 +98,11 @@ class gelfHandler(logging.Handler):
             msg = self.dumps(msgDict)
         if self.proto == 'TCP':
             msg = self.dumps(msgDict) + '\0'
+        if isinstance(msg, six.text_type):
+            try:
+                msg = msg.encode('utf-8')
+            except:
+                msg = msg.encode('latin1')
         return msg
 
     def emit(self, record, **_):
@@ -105,15 +110,11 @@ class gelfHandler(logging.Handler):
         TODO
         '''
         msgDict = None
+        msg = None
         try:
             self.format(record)
             msgDict = self.buildMessage(record)
             msg = self.formatMessage(msgDict)
-            if isinstance(msg, six.text_type):
-                try:
-                    msg = msg.encode('utf-8')
-                except:
-                    msg = msg.encode('latin1')
         except UnicodeEncodeError as err:
             err.data = msgDict
             self.emit_failure(err, level=logging.WARNING)
@@ -132,19 +133,19 @@ class gelfHandler(logging.Handler):
 
     def emit_success(self):
         '''
-        TODO
+        Callback for success
         '''
         pass
 
-    def emit_failure(self, e, **_):
+    def emit_failure(self, err, **_):
         '''
-        TODO
+        Callback for failure
         '''
-        print(repr(e))
+        print(repr(err))
 
     def close(self):
         '''
-        TODO
+        Close transport
         '''
         if self.proto == 'TCP':
             self._transport.sock.close()
