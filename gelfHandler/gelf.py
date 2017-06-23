@@ -6,6 +6,7 @@ License: BSD I guess
 import logging
 import socket
 import json
+import six
 from .syslog import getSysLogLevelName
 from .transport import ThreadedTCPTransport, ThreadedUDPTransport
 
@@ -108,6 +109,11 @@ class gelfHandler(logging.Handler):
             self.format(record)
             msgDict = self.buildMessage(record)
             msg = self.formatMessage(msgDict)
+            if isinstance(msg, six.text_type):
+                try:
+                    msg = msg.encode('utf-8')
+                except:
+                    msg = msg.encode('latin1')
         except UnicodeEncodeError as err:
             err.data = msgDict
             self.emit_failure(err, level=logging.WARNING)
