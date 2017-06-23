@@ -75,11 +75,11 @@ class gelfHandler(logging.Handler):
             msgDict['facility'] = recordDict['name']
         extra_props = recordDict.get('gelfProps', None)
         if isinstance(extra_props, dict):
-            for key, value in extra_props.iteritems():
+            for key, value in extra_props.items():
                 msgDict['_' + key] = value
         global_props = self.globalProps
         if isinstance(global_props, dict):
-            for key, value in global_props.iteritems():
+            for key, value in global_props.items():
                 msgDict['_' + key] = value
         return msgDict
 
